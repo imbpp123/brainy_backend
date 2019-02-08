@@ -1,0 +1,2 @@
+source ~/.bashrc
+source ~/PycharmProjects/brainy_backend/venv/bin/activate
