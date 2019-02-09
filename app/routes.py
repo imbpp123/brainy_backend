@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from flask import request, json
 import statistics
 
@@ -16,9 +18,32 @@ def get_response(data, status):
     return response
 
 
-@app.route('/stations/<string:station>/overcome')
-def stations_overcome(station: str):
-    pass
+@app.route('/variable/<string:variable>/station/<string:station>/overcome')
+def stations_overcome(variable: str, station: str):
+    overcome = {
+        'so2': 180,
+        'no2': 200,
+        'co': 200,
+        'o3': 200,
+        'pm10': 50,
+        'pm2_5': 40
+    }
+    timestamp_start = request.args.get('timestamp_start')
+    timestamp_stop = request.args.get('timestamp_stop')
+
+    if hasattr(Measurand, variable) is not True:
+        return get_response({'error': 'Field does not exits'}, 400)
+    measurand_attr = getattr(Measurand, variable)
+
+    result = db.session.query(func.date(getattr(Measurand, 'time_instant')).label('date_instant')) \
+        .group_by('date_instant') \
+        .filter_by(id_entity=station) \
+        .filter(Measurand.time_instant > timestamp_start) \
+        .filter(Measurand.time_instant < timestamp_stop) \
+        .filter(measurand_attr >= overcome[variable]) \
+        .count()
+
+    return get_response(result, 200)
 
 
 @app.route('/variable/<string:variable>')
