@@ -21,18 +21,16 @@ def stations_overcome(station: str):
     pass
 
 
-@app.route('/station/<string:station>/variable/<string:variable>')
-def stations_stats(station: str, variable: str):
-    def get_real_measure(value: str):
-        result = ['sum', 'mean', 'max', 'min']
-        if value != 'all' and value in result:
-            result.clear()
-            result.append(value)
-        return result
-
+@app.route('/variable/<string:variable>')
+def stations_stats(variable: str):
     timestamp_start = request.args.get('timestamp_start')
     timestamp_stop = request.args.get('timestamp_stop')
-    measure = get_real_measure(request.args.get('measure', default='all'))
+    measure = request.args.get('measure', default='all')
+
+    if measure not in ['sum', 'mean', 'max', 'min']:
+        measure = ['sum', 'mean', 'max', 'min']
+    else:
+        measure = [measure]
 
     if hasattr(Measurand, variable) is not True:
         return get_response({'error': 'Field does not exits'}, 400)
