@@ -32,6 +32,7 @@ class Measurand(db.Model):
     id_entity = db.Column(db.String)
     so2 = db.Column(db.Float)
     no2 = db.Column(db.Float)
+    co = db.Column(db.Float)
     o3 = db.Column(db.Float)
     pm10 = db.Column(db.Float)
     pm2_5 = db.Column(db.Float)
@@ -53,6 +54,10 @@ class Measurand(db.Model):
 
     @validates('no2')
     def validate_no2(self, key, value):
+        return validate_float(key, value)
+
+    @validates('co')
+    def validate_co(self, key, value):
         return validate_float(key, value)
 
     @validates('o3')

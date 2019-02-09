@@ -1,4 +1,3 @@
-from pprint import pprint
 import click
 import csv
 from app import app, db
@@ -13,6 +12,7 @@ def saveToDb(row):
             so2=row[2],
             no2=row[3],
             o3=row[7],
+            co=row[6],
             pm10=row[4],
             pm2_5=row[5],
             time_instant=row[1],
