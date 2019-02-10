@@ -1,8 +1,20 @@
 from flask import request, json
 from sqlalchemy.sql import func
 import pandas as pd
-from app import app, db
+from app import app, db, auth
 from app.models import Measurand
+
+users = {
+    'test': 'password',
+    'admin': 'coolpassword'
+}
+
+
+@auth.get_password
+def get_pw(username):
+    if username in users:
+        return users.get(username)
+    return None
 
 
 def get_response(data=None, status=200, body=None):
@@ -22,6 +34,7 @@ def get_response(data=None, status=200, body=None):
 
 
 @app.route('/variable/<string:variable>/station/<string:station>/timeseries')
+@auth.login_required
 def variable_timeseries(variable: str, station: str):
     timestamp_start = request.args.get('timestamp_start')
     timestamp_stop = request.args.get('timestamp_stop')
@@ -60,6 +73,7 @@ def variable_timeseries(variable: str, station: str):
 
 
 @app.route('/variable/<string:variable>/station/<string:station>/overcome')
+@auth.login_required
 def stations_overcome(variable: str, station: str):
     overcome = {
         'so2': 180,
@@ -91,6 +105,7 @@ def stations_overcome(variable: str, station: str):
 
 
 @app.route('/variable/<string:variable>')
+@auth.login_required
 def stations_stats(variable: str):
     timestamp_start = request.args.get('timestamp_start')
     timestamp_stop = request.args.get('timestamp_stop')
