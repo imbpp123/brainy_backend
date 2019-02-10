@@ -51,6 +51,7 @@ def variable_timeseries(variable: str, station: str):
 
     df = pd.DataFrame(data, columns=['time_instant', variable])
     df.index = df['time_instant']
+    del df['time_instant']
 
     df_resample = df.resample("%iT" % period)
     result = getattr(df_resample, measure)()
