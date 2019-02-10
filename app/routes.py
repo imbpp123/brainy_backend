@@ -1,21 +1,61 @@
-from pprint import pprint
-
 from flask import request, json
-import statistics
-
 from sqlalchemy.sql import func
-
+import pandas as pd
 from app import app, db
 from app.models import Measurand
 
 
-def get_response(data, status):
-    response = app.response_class(
-        response=json.dumps(data),
-        status=status,
-        mimetype='application/json'
-    )
+def get_response(data=None, status=200, body=None):
+    if body is not None:
+        response = app.response_class(
+            response=body,
+            status=status,
+            mimetype='application/json'
+        )
+    else:
+        response = app.response_class(
+            response=json.dumps(data),
+            status=status,
+            mimetype='application/json'
+        )
     return response
+
+
+@app.route('/variable/<string:variable>/station/<string:station>/timeseries')
+def variable_timeseries(variable: str, station: str):
+    timestamp_start = request.args.get('timestamp_start')
+    timestamp_stop = request.args.get('timestamp_stop')
+    measure = request.args.get('measure')
+    period = request.args.get('period', default=5)
+
+    try:
+        period = int(period)
+    except ValueError:
+        return get_response({'error': 'Field value does not exits'}, 400)
+
+    if measure not in ['sum', 'mean', 'max', 'min']:
+        return get_response({'error': 'Field value does not exits'}, 400)
+
+    if timestamp_start is None or timestamp_stop is None:
+        return get_response({'error': 'Field does not exits'}, 400)
+
+    if hasattr(Measurand, variable) is not True:
+        return get_response({'error': 'Field does not exits'}, 400)
+    measurand_attr = getattr(Measurand, variable)
+
+    data = db.session.query(Measurand.time_instant, measurand_attr.label(variable)) \
+        .filter_by(id_entity=station) \
+        .filter(Measurand.time_instant > timestamp_start) \
+        .filter(Measurand.time_instant < timestamp_stop) \
+        .all()
+
+    df = pd.DataFrame(data, columns=['time_instant', variable])
+    df.index = df['time_instant']
+
+    df_resample = df.resample("%iT" % period)
+    result = getattr(df_resample, measure)()
+
+    return get_response(status=200,body=result.to_json(orient='columns'))
 
 
 @app.route('/variable/<string:variable>/station/<string:station>/overcome')
@@ -31,6 +71,9 @@ def stations_overcome(variable: str, station: str):
     timestamp_start = request.args.get('timestamp_start')
     timestamp_stop = request.args.get('timestamp_stop')
 
+    if timestamp_start is None or timestamp_stop is None:
+        return get_response({'error': 'Field does not exits'}, 400)
+
     if hasattr(Measurand, variable) is not True:
         return get_response({'error': 'Field does not exits'}, 400)
     measurand_attr = getattr(Measurand, variable)
@@ -43,7 +86,7 @@ def stations_overcome(variable: str, station: str):
         .filter(measurand_attr >= overcome[variable]) \
         .count()
 
-    return get_response(result, 200)
+    return get_response(data=result, status=200)
 
 
 @app.route('/variable/<string:variable>')
@@ -51,6 +94,9 @@ def stations_stats(variable: str):
     timestamp_start = request.args.get('timestamp_start')
     timestamp_stop = request.args.get('timestamp_stop')
     measure = request.args.get('measure', default='all')
+
+    if timestamp_start is None or timestamp_stop is None:
+        return get_response({'error': 'Field does not exits'}, 400)
 
     if measure not in ['sum', 'mean', 'max', 'min']:
         measure = ['sum', 'mean', 'max', 'min']
@@ -83,4 +129,4 @@ def stations_stats(variable: str):
             new_station_data[val] = getattr(item, val)
         data.append(new_station_data)
 
-    return get_response(data, 200)
+    return get_response(data=data, status=200)
